@@ -89,7 +89,7 @@ def combine_like_terms(terms: list["Term"]) -> list["Term"]:
     new = []
     i = 0
     for term in terms:
-        hash_dict = tuple(term.bases_exponents.keys())
+        hash_dict = tuple(term.bases_exponents.items())
         if hash_dict in d:
             new[d[hash_dict]] += term
         elif not term.is_zero_term():
