@@ -1,5 +1,5 @@
-from calcs.algebraic_expression import _Term as Term
-from calcs.algebraic_expression.utils import safe_int, gcd, min_common_num, mul_add, combine_like_terms
+from algebraic_expression import _Term as Term
+from algebraic_expression.utils import safe_int, gcd, min_common_num, mul_add, combine_like_terms
 
 
 def parse_expression(user_input: str) -> list["Term"]:
@@ -279,6 +279,3 @@ def term_sort_key(term: "Term") -> int:
         return -1
     first = min(term.bases_exponents.keys())
     return term.bases_exponents[first]
-
-
-# hello

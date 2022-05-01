@@ -1,2 +1,2 @@
-from calcs.algebraic_expression.term import Term as _Term
-from calcs.algebraic_expression.expression import Expression
+from algebraic_expression.term import Term as _Term
+from algebraic_expression.expression import Expression

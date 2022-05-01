@@ -1,9 +1,4 @@
-def sort_dict(d: dict) -> dict:
-    """
-    sorted a dict by keys
-    """
-    return dict(sorted(d.items()))
-
+from math import gcd
 
 def if_print(*args, condition, **kwargs) -> None:
     """
@@ -11,21 +6,6 @@ def if_print(*args, condition, **kwargs) -> None:
     """
     if condition:
         print(*args, **kwargs)
-
-
-def common_keys(dicts: list[dict]) -> set:
-    """
-    returns a set of all common keys
-    """
-    if len(dicts) == 0:
-        return set()
-
-    keys = set(dicts[0].keys())
-
-    for dictionary in dicts:
-        keys &= set(dictionary)
-
-    return keys
 
 
 def min_common_num(dicts: list[dict]) -> dict:
@@ -100,6 +80,28 @@ def combine_like_terms(terms: list["Term"]) -> list["Term"]:
     return new
 
 
+def sort_dict(d: dict) -> dict:
+    """
+    sorted a dict by keys
+    """
+    return dict(sorted(d.items()))
+
+
+def common_keys(dicts: list[dict]) -> set:
+    """
+    returns a set of all common keys
+    """
+    if len(dicts) == 0:
+        return set()
+
+    keys = set(dicts[0].keys())
+
+    for dictionary in dicts:
+        keys &= set(dictionary)
+
+    return keys
+
+
 def sum_dict(d1: dict, d2: dict) -> dict:
     """
     sums all the keys in 2 dicts
@@ -112,7 +114,3 @@ def subtract_dict(d1: dict, d2: dict) -> dict:
     opposite of sum_dict
     """
     return {k: (d1.get(k, 0) - d2.get(k, 0)) for k in (set(d1) | set(d2))}
-
-
-# used as utils
-from math import gcd
