@@ -1,5 +1,5 @@
 from algebraic_expression import _Term as Term
-from algebraic_expression.utils import safe_int, gcd, min_common_num, mul_add
+from algebraic_expression.utils import safe_int, gcd, min_common_num, mul_add, sqrt
 
 
 def parse_expression(user_input: str) -> list["Term"]:
@@ -186,21 +186,27 @@ class Expression:
                 return False
         return True
 
-    def quadratic_equation(self):
+    def quadratic_equation(self, *, show_steps=False, round_to=None):
         """
         runs quadratic equation expression's coefficients
         """
-        if len(self) != 3:
-            raise IndexError("len of self must be 3")
 
         a, b, c = tuple(map(int, self._terms))
 
         left = (-1 * b)
-        right = ((b ** 2) - (4 * a * c)) ** 0.5
-
+        right = safe_int(sqrt((b ** 2) - (4 * a * c)), round_to=round_to)
         div = (2 * a)
 
-        return {safe_int((left + right) / div), safe_int((left - right) / div)}
+        lr_p = (left + right)
+        lr_m = (left - right)
+
+        left_div = safe_int(lr_p / div, round_to=round_to)
+        right_div = safe_int(lr_m / div, round_to=round_to)
+
+        if show_steps:
+            print(lr_p, "/", div, " | ", lr_m, "/", div, sep="")
+
+        return {left_div, right_div}
 
     def __contains__(self, item) -> bool:
         return item in self._terms

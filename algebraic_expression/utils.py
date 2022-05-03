@@ -40,17 +40,22 @@ def mul_add(multipy_to, add_to) -> tuple:
                 return -i, -int(x)
 
 
-def safe_int(x):
+def safe_int(x, *, round_to=None):
     """
     converts a number to an int if it only has a .0 on it making it a float
     """
     if isinstance(x, str):
         x = float(x)
+
     if isinstance(x, float):
         if x.is_integer():
-            return int(x)
-    elif isinstance(x, (tuple, list, set)):
-        return type(x)([safe_int(i) for i in x])
+            x = int(x)
+
+        elif isinstance(x, (tuple, list, set)):
+            return type(x)([safe_int(i, round_to=round_to) for i in x])
+
+        elif round_to is not None:
+            x = round(x, round_to)
     return x
 
 
@@ -88,3 +93,9 @@ def subtract_dict(d1: dict, d2: dict) -> dict:
     opposite of sum_dict
     """
     return {k: (d1.get(k, 0) - d2.get(k, 0)) for k in (set(d1) | set(d2))}
+
+
+def sqrt(x):
+    if x < 0:
+        raise Exception("can not square negative number")
+    return x ** 0.5
