@@ -1,12 +1,5 @@
 from math import gcd
 
-def if_print(*args, condition, **kwargs) -> None:
-    """
-    print if a condition is true
-    """
-    if condition:
-        print(*args, **kwargs)
-
 
 def min_common_num(dicts: list[dict]) -> dict:
     """
@@ -59,25 +52,6 @@ def safe_int(x):
     elif isinstance(x, (tuple, list, set)):
         return type(x)([safe_int(i) for i in x])
     return x
-
-
-def combine_like_terms(terms: list["Term"]) -> list["Term"]:
-    """
-    combines like terms and removes zero terms
-    """
-    d = {}
-    new = []
-    i = 0
-    for term in terms:
-        hash_dict = tuple(term.bases_exponents.items())
-        if hash_dict in d:
-            new[d[hash_dict]] += term
-        elif not term.is_zero_term():
-            new.append(term)
-            d[hash_dict] = i
-            i += 1
-
-    return new
 
 
 def sort_dict(d: dict) -> dict:

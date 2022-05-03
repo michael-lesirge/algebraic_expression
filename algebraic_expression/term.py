@@ -52,13 +52,12 @@ class Term:
 
         self.__str_cache = {}
 
-    def str_plus(self, *, plus=False, **kwargs):
+    def str_plus(self, *, plus=False, html=False, up_symbol="**", **kwargs):
         """
         gives options for how you want string to look
         plus adds a plus sign at beginning if there is no negative sign
-        kwargs go to superscript function. def superscript(html=False, up_symbol="**"):
         """
-        set_kwargs = tuple(kwargs.items())
+        set_kwargs = (("html", html), ("up_symbol", up_symbol)) + tuple(kwargs.items())
         if set_kwargs not in self.__str_cache:
             final = []
             if self.coefficient == -1:
@@ -69,7 +68,7 @@ class Term:
             for key, value in self.bases_exponents.items():
                 final.append(key)
                 if value != 1:
-                    final.append(superscript(value, **kwargs))
+                    final.append(superscript(value, html=html, up_symbol=up_symbol, **kwargs))
             self.__str_cache[set_kwargs] = ''.join(final)
 
         result = self.__str_cache[set_kwargs]
@@ -162,6 +161,9 @@ class Term:
 
         return NotImplemented
 
+    def __hash__(self):
+        return hash((hash(self.coefficient), hash(tuple(self.bases_exponents.items()))))
+
     def __neg__(self):
         return self * -1
 
@@ -191,10 +193,10 @@ class Term:
         return self.str_plus()
 
 
-def superscript(value, html=False, up_symbol="**") -> str:
+def superscript(value, html=False, up_symbol="**", ending="", html_tag="sup") -> str:
     """
     returns a superscript version of an exponent
     """
     if html:
-        return '<sup>' + str(value) + '</sup>'
-    return up_symbol + str(value)
+        return f"<{html_tag}>{value}</{html_tag}>" + ending
+    return up_symbol + str(value) + ending
