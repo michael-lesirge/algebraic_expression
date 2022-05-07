@@ -184,7 +184,7 @@ class Term:
         return f"Term(coefficient={self.coefficient}, bases_exponents={self.bases_exponents})"
 
     def __int__(self):
-        return self.coefficient
+        return int(self.coefficient)
 
     def __float__(self):
         return float(self.coefficient)

@@ -1,4 +1,10 @@
-from math import gcd
+def gcd(x, *nums):
+    if len(nums) == 0:
+        return x
+    y, *new_nums = nums
+    while y:
+        x, y = y, x % y
+    return gcd(x, *new_nums)
 
 
 def min_common_num(dicts: list[dict]) -> dict:

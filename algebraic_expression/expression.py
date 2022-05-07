@@ -1,4 +1,4 @@
-from algebraic_expression import _Term as Term
+from algebraic_expression import Term
 from algebraic_expression.utils import safe_int, gcd, min_common_num, mul_add, sqrt
 
 
@@ -14,7 +14,6 @@ def parse_expression(user_input: str) -> list["Term"]:
         if last in ["*", "^"]:
             updated_input += char
         else:
-
             updated_input += swapper.get(char, char)
         last = char
 
@@ -22,7 +21,7 @@ def parse_expression(user_input: str) -> list["Term"]:
 
 
 class Expression:
-    def __init__(self, value="", *, terms=None, _combine=True):
+    def __init__(self, value="", *, terms=None, combine_terms=False, remove_zero_terms=False):
         self._terms: list[Term]
 
         if terms is None:
@@ -30,9 +29,12 @@ class Expression:
         else:
             self._terms = terms
 
-        if _combine:
-            # this filters out all zero-terms, combines like terms, and sorts terms into standard form
+        if combine_terms:
             self._terms = combine_like_terms(self._terms)
+        if remove_zero_terms:
+            self._terms = [term for term in self._terms if not term.is_zero_term()]
+
+        # sorts list of terms into standard form
         self._terms.sort(key=term_sort_key, reverse=True)
 
     def str_plus(self, *, plus=False, braces=False, sep="", html=False, up_symbol="**", **kwargs):
@@ -92,15 +94,15 @@ class Expression:
             return list(map(self.distribute, other._terms))
         return NotImplemented
 
-    def gcf(self, first_neg=False) -> Term:
+    def gcf(self, first_neg=False) -> "Expression":
         """
         returns the greatest common factor of all terms
         if first_neg is true then the grf will cancel the negative out
         """
         if len(self._terms) == 0:
-            return Term()
+            return Expression()
 
-        coefficients = [int(val) for val in self._terms]
+        coefficients = [val.coefficient for val in self._terms]
 
         gc_coefficient = gcd(*coefficients)
 
@@ -110,8 +112,8 @@ class Expression:
         elif first_neg and self._terms[0].coefficient < 0:
             gc_coefficient *= -1
 
-        return Term(coefficient=gc_coefficient,
-                    bases_exponents=min_common_num([val.bases_exponents for val in self._terms]))
+        return Expression(terms=[Term(coefficient=gc_coefficient,
+                                      bases_exponents=min_common_num([val.bases_exponents for val in self.removed_zero_terms()._terms]))])
 
     def simplifying(self) -> tuple["Expression", tuple["Expression", "Expression"]]:
         """
@@ -123,10 +125,10 @@ class Expression:
         expression /= gcf
 
         if len(expression) == 2:
-            expression = Expression(terms=expression[0] + [Term()] + expression[1], _combine=False)
+            expression = Expression(terms=expression[0] + [Term()] + expression[1])
 
         if len(expression) == 3:
-            split = mul_add(int(expression[0] * expression[2]), int(expression[1]))
+            split = mul_add((expression[0] * expression[2]).coefficient, (expression[1]).coefficient)
             if split is None:
                 raise Exception("Expression could not be simplified")
 
@@ -136,7 +138,6 @@ class Expression:
                 terms=[expression._terms[0]] +
                       [Term(coefficient=x1, bases_exponents=expression[1].bases_exponents),
                        Term(coefficient=x2, bases_exponents=expression[1].bases_exponents)] + [expression[2]],
-                _combine=False
             )
 
         if len(expression) == 4:
@@ -158,7 +159,7 @@ class Expression:
         """
         return Expression(terms=[term.copy() for term in self._terms])
 
-    def combine_like_terms(self, *others):
+    def combined_like_terms(self, *others, remove_zero_terms=True):
         combined = Expression()
         for term in self._terms:
             combined += term
@@ -172,7 +173,12 @@ class Expression:
             elif isinstance(other, Expression):
                 combined += other
 
+        if remove_zero_terms:
+            combined = combined.removed_zero_terms()
         return combined
+
+    def removed_zero_terms(self):
+        return Expression(terms=[term for term in self._terms if not term.is_zero_term()])
 
     def is_standard_form(self) -> bool:
         """
@@ -247,7 +253,8 @@ class Expression:
         if isinstance(other, Term):
             return Expression(terms=[safe_int(term / other) for term in self._terms])
         elif isinstance(other, Expression):
-            return sum([safe_int(self / other_term) for other_term in other._terms], start=Expression())
+            return sum([safe_int(self / other_term) for other_term in other._terms],
+                       start=Expression())
         return NotImplemented
 
     def __hash__(self):
@@ -257,6 +264,8 @@ class Expression:
         return self * -1
 
     def __pow__(self, power, modulo=None) -> "Expression":
+        if modulo:
+            return NotImplemented
         current = self
         for i in range(power - 1):
             current *= self
@@ -299,7 +308,7 @@ def term_sort_key(term: "Term") -> int:
     return term.bases_exponents[first]
 
 
-def combine_like_terms(terms: list["Term"], remove_zero_terms=True) -> list["Term"]:
+def combine_like_terms(terms: list["Term"]) -> list["Term"]:
     """
     combines like terms
     """
@@ -310,7 +319,7 @@ def combine_like_terms(terms: list["Term"], remove_zero_terms=True) -> list["Ter
         hash_dict = tuple(term.bases_exponents.items())
         if hash_dict in d:
             new[d[hash_dict]] += term
-        elif not (term.is_zero_term() and remove_zero_terms):
+        else:
             new.append(term)
             d[hash_dict] = i
             i += 1
