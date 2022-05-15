@@ -4,7 +4,7 @@ def gcd(x, *nums):
     y, *new_nums = nums
     while y:
         x, y = y, x % y
-    return gcd(x, *new_nums)
+    return abs(gcd(x, *new_nums))
 
 
 def min_common_num(dicts: list[dict]) -> dict:

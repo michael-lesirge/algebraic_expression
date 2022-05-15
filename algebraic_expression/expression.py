@@ -94,7 +94,7 @@ class Expression:
             return list(map(self.distribute, other._terms))
         return NotImplemented
 
-    def gcf(self, first_neg=False) -> "Expression":
+    def gcf(self, first_neg=False) -> Term:
         """
         returns the greatest common factor of all terms
         if first_neg is true then the grf will cancel the negative out
@@ -108,14 +108,13 @@ class Expression:
 
         if all([i < 1 for i in coefficients]):
             gc_coefficient *= -1
-
         elif first_neg and self._terms[0].coefficient < 0:
             gc_coefficient *= -1
 
-        return Expression(terms=[Term(coefficient=gc_coefficient,
-                                      bases_exponents=min_common_num([val.bases_exponents for val in self.removed_zero_terms()._terms]))])
+        return Term(coefficient=gc_coefficient,
+                    bases_exponents=min_common_num([val.bases_exponents for val in self.removed_zero_terms()._terms]))
 
-    def simplifying(self) -> tuple["Expression", tuple["Expression", "Expression"]]:
+    def simplifying(self) -> tuple[Term, tuple["Expression", "Expression"]]:
         """
         returns simplified (according to math class) version of expression
         """
@@ -151,7 +150,7 @@ class Expression:
             if left != right:
                 raise Exception("left and right do not match")
 
-            return Expression(terms=[gcf]), (left, Expression(terms=[left_gcf, right_gcf]))
+            return gcf, (left, Expression(terms=[left_gcf, right_gcf]))
 
     def copy(self) -> "Expression":
         """
