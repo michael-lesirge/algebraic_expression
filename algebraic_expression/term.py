@@ -32,51 +32,60 @@ def parse_term(user_input: str) -> tuple[int, dict]:
 
 
 class Term:
-    __slots__ = ("coefficient", "bases_exponents", "__str_cache")
+    """
+    single term in expression
+    """
+    __slots__ = ("coefficient", "bases_exponents", "_str_cache")
 
-    def __init__(self, value: str or int = "0", *, coefficient=None, bases_exponents=None):
+    def __init__(self, value=None, *, coefficient: float = 0, bases_exponents: dict = None):
+        """
+        example:
+        coefficient = 4
+        bases_exponents = {'x': 2}
+        output = Term(4x**2)
+        """
+        self.coefficient = coefficient
+        self.bases_exponents = bases_exponents or dict()
         if isinstance(value, int):
             self.coefficient = value
-            self.bases_exponents = {}
-        elif (coefficient is not None) or (bases_exponents is not None):
-            if coefficient is None:
-                coefficient = 1
-            if bases_exponents is None:
-                bases_exponents = {}
-            self.coefficient, self.bases_exponents = coefficient, bases_exponents
-        else:
+        elif isinstance(value, str):
             self.coefficient, self.bases_exponents = parse_term(value)
 
         self.bases_exponents = dict(filter(lambda x: x[1] not in [0, float("-inf")], self.bases_exponents.items()))
         self.bases_exponents = sort_dict(self.bases_exponents)
 
-        self.__str_cache = {}
+        self._str_cache = None
 
     def str_plus(self, *, plus=False, html=False, up_symbol="**", **kwargs):
         """
         gives options for how you want string to look
         plus adds a plus sign at beginning if there is no negative sign
         """
-        set_kwargs = (("html", html), ("up_symbol", up_symbol)) + tuple(kwargs.items())
-        if set_kwargs not in self.__str_cache:
-            final = []
-            if self.coefficient == -1:
-                final.append("-")
-            elif self.coefficient != 1 or len(self.bases_exponents) == 0:
-                final.append(str(self.coefficient))
+        final = []
+        if self.coefficient == -1:
+            final.append("-")
+        elif self.coefficient != 1 or len(self.bases_exponents) == 0:
+            final.append(str(self.coefficient))
 
-            for key, value in self.bases_exponents.items():
-                final.append(key)
-                if value != 1:
-                    final.append(superscript(value, html=html, up_symbol=up_symbol, **kwargs))
-            self.__str_cache[set_kwargs] = ''.join(final)
-
-        result = self.__str_cache[set_kwargs]
+        for key, value in self.bases_exponents.items():
+            final.append(key)
+            if value != 1:
+                final.append(superscript(value, html=html, up_symbol=up_symbol, **kwargs))
+        result = ''.join(final)
 
         if plus and result[0] != '-':
             result = '+' + result
 
         return result
+
+    def get_coefficient(self):
+        return self.coefficient
+
+    def get_bases(self) -> list:
+        return list(self.bases_exponents.keys())
+
+    def get_bases_and_exponents(self):
+        return self.bases_exponents.copy()
 
     def str_equation(self, *, plus=False) -> str:
         """
@@ -177,7 +186,16 @@ class Term:
             return self.coefficient != other.coefficient or self.bases_exponents != other.bases_exponents
         return True
 
+    def __len__(self):
+        """
+        number of bases
+        """
+        return len(self.bases_exponents)
+
     def __contains__(self, item) -> bool:
+        """
+        checks if variable is as key in bases
+        """
         return item in self.bases_exponents
 
     def __repr__(self):
@@ -190,7 +208,9 @@ class Term:
         return float(self.coefficient)
 
     def __str__(self):
-        return self.str_plus()
+        if self._str_cache is None:
+            self._str_cache = self.str_plus()
+        return self._str_cache
 
 
 def superscript(value, html=False, up_symbol="**", ending="", html_tag="sup") -> str:

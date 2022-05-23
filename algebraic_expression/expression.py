@@ -16,26 +16,33 @@ def parse_expression(user_input: str) -> list["Term"]:
         else:
             updated_input += swapper.get(char, char)
         last = char
-
-    return [Term(term) for term in updated_input.split(" ")]
+    return [Term(term) for term in updated_input.split(" ") if term not in ("", " ")]
 
 
 class Expression:
-    def __init__(self, value="", *, terms=None, combine_terms=False, remove_zero_terms=False):
-        self._terms: list[Term]
+    """
+    algebraic expression class
+    contains a list of terms
+    """
+    pre_sorted = False
 
-        if terms is None:
-            self._terms = parse_expression(value)
-        else:
-            self._terms = terms
+    def __init__(self, value="", *, terms=None, combine_terms=True, sort=not pre_sorted):
+        terms = terms or list()
+
+        if isinstance(value, str):
+            terms.extend(parse_expression(value))
+        elif isinstance(value, int):
+            terms.append(Term(value))
 
         if combine_terms:
-            self._terms = combine_like_terms(self._terms)
-        if remove_zero_terms:
-            self._terms = [term for term in self._terms if not term.is_zero_term()]
+            # combines like terms
+            terms = combine_like_terms(terms)
 
-        # sorts list of terms into standard form
-        self._terms.sort(key=term_sort_key, reverse=True)
+        if sort:
+            # sorts list of terms into standard form
+            terms = order(terms)
+
+        self._terms: tuple[Term] = tuple(terms)
 
     def str_plus(self, *, plus=False, braces=False, sep="", html=False, up_symbol="**", **kwargs):
         """
@@ -76,7 +83,7 @@ class Expression:
 
     def var_equals(self, variables: dict[str: int]) -> int:
         """
-        variables: dict must contain all variables that are in equation
+        variables dict must contain all variables that are in equation
         runs the equation with eval and returns answer
         """
         return eval(self.str_equation(), variables)
@@ -97,10 +104,10 @@ class Expression:
     def gcf(self, first_neg=False) -> Term:
         """
         returns the greatest common factor of all terms
-        if first_neg is true then the grf will cancel the negative out
+        if first_neg is true then the gcf will cancel the first negative out
         """
         if len(self._terms) == 0:
-            return Expression()
+            return Term()
 
         coefficients = [val.coefficient for val in self._terms]
 
@@ -112,90 +119,12 @@ class Expression:
             gc_coefficient *= -1
 
         return Term(coefficient=gc_coefficient,
-                    bases_exponents=min_common_num([val.bases_exponents for val in self.removed_zero_terms()._terms]))
-
-    def simplifying(self) -> tuple[Term, tuple["Expression", "Expression"]]:
-        """
-        returns simplified (according to math class) version of expression
-        """
-        expression = self.copy()
-
-        gcf = expression.gcf()
-        expression /= gcf
-
-        if len(expression) == 2:
-            expression = Expression(terms=expression[0] + [Term()] + expression[1])
-
-        if len(expression) == 3:
-            split = mul_add((expression[0] * expression[2]).coefficient, (expression[1]).coefficient)
-            if split is None:
-                raise Exception("Expression could not be simplified")
-
-            x1, x2 = split
-
-            expression = Expression(
-                terms=[expression._terms[0]] +
-                      [Term(coefficient=x1, bases_exponents=expression[1].bases_exponents),
-                       Term(coefficient=x2, bases_exponents=expression[1].bases_exponents)] + [expression[2]],
-            )
-
-        if len(expression) == 4:
-            left, right = expression[0:2], expression[2:4]
-
-            left_gcf, right_gcf = left.gcf(first_neg=True), right.gcf(first_neg=True)
-
-            left /= left_gcf
-            right /= right_gcf
-
-            if left != right:
-                raise Exception("left and right do not match")
-
-            return gcf, (left, Expression(terms=[left_gcf, right_gcf]))
-
-    def copy(self) -> "Expression":
-        """
-        makes copy of expression
-        """
-        return Expression(terms=[term.copy() for term in self._terms])
-
-    def combined_like_terms(self, *others, remove_zero_terms=True):
-        combined = Expression()
-        for term in self._terms:
-            combined += term
-
-        for other in others:
-            if isinstance(other, int):
-                other = Term(other)
-
-            if isinstance(other, Term):
-                combined += other
-            elif isinstance(other, Expression):
-                combined += other
-
-        if remove_zero_terms:
-            combined = combined.removed_zero_terms()
-        return combined
-
-    def removed_zero_terms(self):
-        return Expression(terms=[term for term in self._terms if not term.is_zero_term()])
-
-    def is_standard_form(self) -> bool:
-        """
-        returns if expression is in standard form
-        """
-        for index, term in enumerate(self._terms):
-            if len(term.bases_exponents) == 0:
-                if 0 == len(self._terms) - 1:
-                    return False
-            elif term.bases_exponents[min(term.bases_exponents)] != (len(self._terms) - 1) - index:
-                return False
-        return True
+                    bases_exponents=min_common_num([val.bases_exponents for val in self._terms]))
 
     def quadratic_equation(self, *, show_steps=False, round_to=None):
         """
         runs quadratic equation expression's coefficients
         """
-
         a, b, c = tuple(map(int, self._terms))
 
         left = (-1 * b)
@@ -214,6 +143,9 @@ class Expression:
         return {left_div, right_div}
 
     def __contains__(self, item) -> bool:
+        """
+        checks if terms is in expression
+        """
         return item in self._terms
 
     def __add__(self, other) -> "Expression":
@@ -221,7 +153,7 @@ class Expression:
             other = Term(other)
 
         if isinstance(other, Term):
-            new = self._terms.copy()
+            new = list(self._terms)
             for index, term in enumerate(new):
                 if other.same_bases_and_exponents(term):
                     new[index] = term + other
@@ -236,10 +168,10 @@ class Expression:
         return self + (-other)
 
     def __mul__(self, other) -> "Expression":
-        if isinstance(other, int):
-            other = Term(other)
-
-        if isinstance(other, Term):
+        """
+        multiplication is just the sum of other disputed to self or the other way around
+        """
+        if isinstance(other, (int, Term)):
             return self.distribute(other)
         if isinstance(other, Expression):
             return sum(other.distribute(self), start=Expression())
@@ -258,6 +190,9 @@ class Expression:
 
     def __hash__(self):
         return hash(tuple(self._terms))
+
+    def __iter__(self):
+        return iter(self._terms)
 
     def __neg__(self):
         return self * -1
@@ -297,14 +232,21 @@ class Expression:
         return f"Expression(terms={self._terms})"
 
 
-def term_sort_key(term: "Term") -> int:
-    """
-    used as a key for sorting terms in expressions into standard form
-    """
-    if term.bases_exponents == {}:
-        return -1
-    first = min(term.bases_exponents.keys())
-    return term.bases_exponents[first]
+def order(terms: list[Term]) -> list[Term]:
+    letters = {}
+    for term in terms:
+        key_list = term.get_bases()
+        if key_list:
+            key = key_list[0]
+        else:
+            key = '~'
+        letters[key] = letters.get(key, []) + [term]
+    new = []
+    for letter in sorted(letters.keys()):
+        new.extend(sorted(letters[letter],
+                          key=lambda lterm: lterm.bases_exponents[letter] if letter != '~' else lterm.coefficient,
+                          reverse=True))
+    return new
 
 
 def combine_like_terms(terms: list["Term"]) -> list["Term"]:
@@ -318,7 +260,7 @@ def combine_like_terms(terms: list["Term"]) -> list["Term"]:
         hash_dict = tuple(term.bases_exponents.items())
         if hash_dict in d:
             new[d[hash_dict]] += term
-        else:
+        elif not term.is_zero_term():
             new.append(term)
             d[hash_dict] = i
             i += 1
