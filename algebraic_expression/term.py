@@ -37,24 +37,26 @@ class Term:
     """
     __slots__ = ("coefficient", "bases_exponents", "_str_cache")
 
-    def __init__(self, value=None, *, coefficient: float = 0, bases_exponents: dict = None):
+    def __init__(self, value=None, *, coefficient: float = 0, bases_exponents: dict[str: int or float] = None):
         """
         example:
         coefficient = 4
         bases_exponents = {'x': 2}
         output = Term(4x**2)
         """
-        self.coefficient = coefficient
-        self.bases_exponents = bases_exponents or dict()
-        if isinstance(value, int):
-            self.coefficient = value
-        elif isinstance(value, str):
-            self.coefficient, self.bases_exponents = parse_term(value)
+        if isinstance(value, Term):
+            self.coefficient, self.bases_exponents, self._str_cache = value.coefficient, value.bases_exponents, value._str_cache
+        else:
+            self.coefficient = coefficient
+            self.bases_exponents = bases_exponents or dict()
+            if isinstance(value, (int, float)):
+                self.coefficient = value
+            elif isinstance(value, str):
+                self.coefficient, self.bases_exponents = parse_term(value)
 
-        self.bases_exponents = dict(filter(lambda x: x[1] not in [0, float("-inf")], self.bases_exponents.items()))
-        self.bases_exponents = sort_dict(self.bases_exponents)
-
-        self._str_cache = None
+            self.bases_exponents = dict(filter(lambda x: x[1] not in [0, float("-inf")], self.bases_exponents.items()))
+            self.bases_exponents = sort_dict(self.bases_exponents)
+            self._str_cache = None
 
     def str_plus(self, *, plus=False, html=False, up_symbol="**", **kwargs):
         """
@@ -138,9 +140,12 @@ class Term:
                 return Term(coefficient=self.coefficient + other.coefficient, bases_exponents=self.bases_exponents)
             else:
                 raise Exception(f"No way to add {self} and {other} due to lack of matching bases and exponents. ")
-        elif isinstance(other, int):
+        elif isinstance(other, (int, float)):
             return Term(coefficient=self.coefficient + other, bases_exponents=self.bases_exponents)
         return NotImplemented
+
+    def __radd__(self, other):
+        return self + other
 
     def __sub__(self, other):
         if isinstance(other, Term):
@@ -148,26 +153,39 @@ class Term:
                 return Term(coefficient=self.coefficient - other.coefficient, bases_exponents=self.bases_exponents)
             else:
                 raise Exception(f"No way to subtract {self} and {other} due to lack of matching bases and exponents. ")
-        elif isinstance(other, int):
+        elif isinstance(other, (int, float)):
             return Term(coefficient=self.coefficient - other, bases_exponents=self.bases_exponents)
         return NotImplemented
 
+    def __rsub__(self, other):
+        if isinstance(other, (int, float)):
+            return Term(other) - self
+        return NotImplemented
+
     def __mul__(self, other):
-        if isinstance(other, int):
+        if isinstance(other, (int, float)):
             other = Term(str(other))
         if isinstance(other, Term):
             return Term(coefficient=self.coefficient * other.coefficient,
                         bases_exponents=sum_dict(self.bases_exponents, other.bases_exponents))
         return NotImplemented
 
+    def __rmul__(self, other):
+        return self * other
+
     def __truediv__(self, other):
-        if isinstance(other, int):
+        if isinstance(other, (int, float)):
             other = Term(str(other))
 
         if isinstance(other, Term):
             return Term(coefficient=safe_int(self.coefficient / other.coefficient),
                         bases_exponents=subtract_dict(self.bases_exponents, other.bases_exponents))
 
+        return NotImplemented
+
+    def __rtruediv__(self, other):
+        if isinstance(other, (int, float)):
+            return Term(other) / self
         return NotImplemented
 
     def __hash__(self):

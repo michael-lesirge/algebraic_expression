@@ -1,5 +1,5 @@
 from algebraic_expression import Term
-from algebraic_expression.utils import safe_int, gcd, min_common_num, mul_add, sqrt
+from algebraic_expression.utils import safe_int, gcd, min_common_num, sqrt, subtract_dict
 
 
 def parse_expression(user_input: str) -> list["Term"]:
@@ -24,18 +24,22 @@ class Expression:
     algebraic expression class
     contains a list of terms
     """
-    pre_sorted = False
+    combine = True
+    sort = True
 
-    def __init__(self, value="", *, terms=None, combine_terms=True, sort=not pre_sorted):
-        terms = terms or list()
+    def __init__(self, value="", *, terms=None, combine_terms=combine, sort=sort):
+        terms = list(terms or ())
+        if terms:
+            terms = [Term(term) for term in terms]
+        else:
+            terms = []
 
         if isinstance(value, str):
             terms.extend(parse_expression(value))
-        elif isinstance(value, int):
+        elif isinstance(value, (int, float)):
             terms.append(Term(value))
 
         if combine_terms:
-            # combines like terms
             terms = combine_like_terms(terms)
 
         if sort:
@@ -72,13 +76,12 @@ class Expression:
         """
         returns an equation of itself that could be run by python
         """
-        first = not plus
         final = ""
         for term in self._terms:
-            if not first:
+            if plus:
                 final += "+"
-            final += "(" + term.str_equation(plus=(not first)) + ")"
-            first = False
+            final += "(" + term.str_equation() + ")"
+            plus = True
         return final
 
     def var_equals(self, variables: dict[str: int]) -> int:
@@ -95,7 +98,7 @@ class Expression:
         """
         if callable(other):
             return Expression(terms=list(map(other, self._terms)))
-        elif isinstance(other, (Term, int)):
+        elif isinstance(other, (Term, int, float)):
             return Expression(terms=[(term * other) for term in self._terms])
         elif isinstance(other, Expression):
             return list(map(self.distribute, other._terms))
@@ -121,7 +124,7 @@ class Expression:
         return Term(coefficient=gc_coefficient,
                     bases_exponents=min_common_num([val.bases_exponents for val in self._terms]))
 
-    def quadratic_equation(self, *, show_steps=False, round_to=None):
+    def quadratic_equation(self, *, round_to=None) -> set:
         """
         runs quadratic equation expression's coefficients
         """
@@ -137,9 +140,6 @@ class Expression:
         left_div = safe_int(lr_p / div, round_to=round_to)
         right_div = safe_int(lr_m / div, round_to=round_to)
 
-        if show_steps:
-            print(lr_p, "/", div, " | ", lr_m, "/", div, sep="")
-
         return {left_div, right_div}
 
     def __contains__(self, item) -> bool:
@@ -149,7 +149,7 @@ class Expression:
         return item in self._terms
 
     def __add__(self, other) -> "Expression":
-        if isinstance(other, int):
+        if isinstance(other, (int, float)):
             other = Term(other)
 
         if isinstance(other, Term):
@@ -164,32 +164,53 @@ class Expression:
             return sum(other._terms, start=self)
         return NotImplemented
 
+    def __radd__(self, other):
+        return self + other
+
     def __sub__(self, other) -> "Expression":
         return self + (-other)
+
+    def __rsub__(self, other):
+        if isinstance(other, (int, float)):
+            other = Term(other)
+        elif isinstance(other, Term):
+            other = Expression(terms=[other])
+        return other - self
 
     def __mul__(self, other) -> "Expression":
         """
         multiplication is just the sum of other disputed to self or the other way around
         """
-        if isinstance(other, (int, Term)):
+        if isinstance(other, (int, float, Term)):
             return self.distribute(other)
         if isinstance(other, Expression):
             return sum(other.distribute(self), start=Expression())
         return NotImplemented
 
-    def __truediv__(self, other):
-        if isinstance(other, int):
-            other = Term(other)
+    def __rmul__(self, other):
+        return self * other
 
+    def __truediv__(self, other):
+        if isinstance(other, (int, float)):
+            other = Term(other)
         if isinstance(other, Term):
             return Expression(terms=[safe_int(term / other) for term in self._terms])
         elif isinstance(other, Expression):
-            return sum([safe_int(self / other_term) for other_term in other._terms],
-                       start=Expression())
+            if len(other) == 1:
+                return self / other[0]
+            # TODO
+            # I spent so long trying to figure out a way to expressions by other expressions.
         return NotImplemented
 
+    def __rtruediv__(self, other):
+        if isinstance(other, (int, float)):
+            other = Term(other)
+        elif isinstance(other, Term):
+            other = Expression(terms=[other])
+        return other / self
+
     def __hash__(self):
-        return hash(tuple(self._terms))
+        return hash(self._terms)
 
     def __iter__(self):
         return iter(self._terms)
