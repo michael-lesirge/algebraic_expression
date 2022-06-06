@@ -49,19 +49,22 @@ class Term:
         else:
             self.coefficient = coefficient
             self.bases_exponents = bases_exponents or dict()
+            
             if isinstance(value, (int, float)):
                 self.coefficient = value
             elif isinstance(value, str):
                 self.coefficient, self.bases_exponents = parse_term(value)
+            elif value is not None:
+                raise Exception(f"invalid type {type(value)} for Expression")
 
-            self.bases_exponents = dict(filter(lambda x: x[1] not in [0, float("-inf")], self.bases_exponents.items()))
+            self.bases_exponents = dict(filter(lambda x: x[1]!=0, self.bases_exponents.items()))
             self.bases_exponents = sort_dict(self.bases_exponents)
+
             self._str_cache = None
 
     def str_plus(self, *, plus=False, html=False, up_symbol="**", **kwargs):
         """
         gives options for how you want string to look
-        plus adds a plus sign at beginning if there is no negative sign
         """
         final = []
         if self.coefficient == -1:
@@ -80,14 +83,9 @@ class Term:
 
         return result
 
-    def get_coefficient(self):
-        return self.coefficient
-
-    def get_bases(self) -> list:
+    @property
+    def bases(self) -> list:
         return list(self.bases_exponents.keys())
-
-    def get_bases_and_exponents(self):
-        return self.bases_exponents.copy()
 
     def str_equation(self, *, plus=False) -> str:
         """
@@ -110,28 +108,16 @@ class Term:
         return eval(self.str_equation(), variables)
 
     def same_bases(self, other) -> bool:
-        """
-        returns true if 2 terms have the same bases
-        """
-        if isinstance(other, Term):
-            return set(self.bases_exponents.keys()) == set(other.bases_exponents.keys())
-        return False
+        return isinstance(other, Term) and (set(self.bases_exponents.keys()) == set(other.bases_exponents.keys()))
+
 
     def same_bases_and_exponents(self, other) -> bool:
         """
         returns true if 2 terms have the same bases and exponents
         """
-        if isinstance(other, Term):
-            return self.bases_exponents == other.bases_exponents
-        return False
-
-    def copy(self):
-        return Term(coefficient=self.coefficient, bases_exponents=self.bases_exponents.copy())
+        return isinstance(other, Term) and (self.bases_exponents == other.bases_exponents)
 
     def is_zero_term(self) -> bool:
-        """
-        returns if the coefficient is zero
-        """
         return self.coefficient == 0
 
     def __add__(self, other):
@@ -192,32 +178,22 @@ class Term:
         return hash((hash(self.coefficient), hash(tuple(self.bases_exponents.items()))))
 
     def __neg__(self):
-        return self * -1
+        return -1 * self
 
     def __eq__(self, other):
-        if isinstance(other, Term):
-            return self.coefficient == other.coefficient and self.bases_exponents == other.bases_exponents
-        return False
+        return isinstance(other, Term) and (self.coefficient == other.coefficient and self.bases_exponents == other.bases_exponents)
 
     def __ne__(self, other):
-        if isinstance(other, Term):
-            return self.coefficient != other.coefficient or self.bases_exponents != other.bases_exponents
-        return True
+        return (not isinstance(other, Term)) or (self.coefficient != other.coefficient or self.bases_exponents != other.bases_exponents)
 
     def __len__(self):
-        """
-        number of bases
-        """
-        return len(self.bases_exponents)
+        return len(self.bases)
 
-    def __contains__(self, item) -> bool:
-        """
-        checks if variable is as key in bases
-        """
-        return item in self.bases_exponents
+    def __contains__(self, item):
+        return item in self.bases
 
     def __repr__(self):
-        return f"Term(coefficient={self.coefficient}, bases_exponents={self.bases_exponents})"
+        return f"{self.__class__.__name__}(coefficient={self.coefficient}, bases_exponents={self.bases_exponents})"
 
     def __int__(self):
         return int(self.coefficient)
