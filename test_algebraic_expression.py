@@ -1,4 +1,3 @@
-from re import S
 from algebraic_expression import Expression as Expr
 from algebraic_expression import Term
 
@@ -18,6 +17,7 @@ class TestExpression(unittest.TestCase):
         self.assertEqual(Expr("6xyz+2xy") + Expr("-8xyz"), Expr("-2xyz+2xy"))
         self.assertEqual(Expr("3x+5") + Expr("5x-2"), Expr("8x+3"))
         self.assertEqual(Expr("-x-3") + Expr("3x+8"), Expr("2x+5"))
+        self.assertEqual(Expr("2y**3+5y+8") + Expr("19y+4y**2-12"), Expr("2y**3+4y**2+24y-4"))
 
     def test_negative(self):
         self.assertEqual(-Expr("-3x**5+9y+z"), Expr("3x**5-9y-z"))
@@ -27,12 +27,17 @@ class TestExpression(unittest.TestCase):
         # x-y = x+(-y)
         self.assertEqual(Expr("5x+5") - Expr("2x+2"), Expr("3x+3"))
         self.assertEqual(Expr("-5v-2") - Expr("4v+2"), Expr("-9v-4"))
+        self.assertEqual(Expr("5c**3+14c**2-72") - Expr("-15c**2+8c+42"), Expr("5c**3+29c**2-8c-114"))
 
     def test_distribute(self):
         self.assertEqual(Expr("3x+6").distribute(Expr("2x-2")), [Expr("6x**2+12x"), Expr("-6x-12")])
         self.assertEqual(Expr("2x-2").distribute(Expr("3x+6")), [Expr("6x**2-6x"), Expr("12x-12")])
+        self.assertEqual(Expr("2a**2-5a+7").distribute(Expr("3a-6")), [Expr("6a**3-15a**2+21a"), Expr("-12a**2+30a-42")])
 
     def test_multiplication(self):
+        self.assertEqual(Expr("x**3") * Expr("x**4"), Expr("x**7"))
+        self.assertEqual(Expr("2h**23") * Expr("3h**17"), Expr("6h**40"))
+        self.assertEqual(Expr("") * Expr(""), Expr(""))
         self.assertEqual(Expr("3x+6") * Expr("2x-2"), Expr("6x**2+6x-12"))
         self.assertEqual(Expr("3a+5b") * Expr("5a-7b"), Expr("15a**2+4ab-35b**2"))
         self.assertEqual(Expr("5x**2-6x+9") * Expr("2x+3"), Expr("10x**3+3x**2+27"))
@@ -43,14 +48,14 @@ class TestExpression(unittest.TestCase):
         self.assertEqual(Expr("-25x**4y**3+30x**2y**5") / Expr("-5x**2y"), Expr("5x**2y**2-6y**4"))
 
     def test_display(self):
-        expr1 = Expr("8x**3y+6x**2+3y+z")
-        self.assertEqual(str(expr1), "8x**3y+6x**2+3y+z")
-        self.assertEqual(expr1.str_plus(), "8x**3y+6x**2+3y+z")
-        self.assertEqual(expr1.str_plus(sep=" "), "8x**3y +6x**2 +3y +z")
-        self.assertEqual(expr1.str_plus(braces=True), "(8x**3y+6x**2+3y+z)")
-        self.assertEqual(expr1.str_plus(plus=True), "+8x**3y+6x**2+3y+z")
-        self.assertEqual(expr1.str_plus(braces=True, plus=True), "+(8x**3y+6x**2+3y+z)")
-        self.assertEqual(expr1.str_plus(html=True), "8x<sup>3</sup>y+6x<sup>2</sup>+3y+z")
+        expr1 = Expr("8x**3y+6x**2+3y-z")
+        self.assertEqual(str(expr1), "8x**3y+6x**2+3y-z")
+        self.assertEqual(expr1.str_plus(), "8x**3y+6x**2+3y-z")
+        self.assertEqual(expr1.str_plus(sep=" "), "8x**3y +6x**2 +3y -z")
+        self.assertEqual(expr1.str_plus(braces=True), "(8x**3y+6x**2+3y-z)")
+        self.assertEqual(expr1.str_plus(plus=True), "+8x**3y+6x**2+3y-z")
+        self.assertEqual(expr1.str_plus(braces=True, plus=True), "+(8x**3y+6x**2+3y-z)")
+        self.assertEqual(expr1.str_plus(html=True), "8x<sup>3</sup>y+6x<sup>2</sup>+3y-z")
 
         self.assertEqual(expr1, Expr(str(expr1)))
         
@@ -58,7 +63,7 @@ class TestExpression(unittest.TestCase):
                                       "Term(coefficient=8, bases_exponents={'x': 3, 'y': 1}), "
                                       "Term(coefficient=6, bases_exponents={'x': 2}), "
                                       "Term(coefficient=3, bases_exponents={'y': 1}), "
-                                      "Term(coefficient=1, bases_exponents={'z': 1})"
+                                      "Term(coefficient=-1, bases_exponents={'z': 1})"
                                       "))")
 
     def test_getting(self):
@@ -72,6 +77,8 @@ class TestExpression(unittest.TestCase):
         for index, term in enumerate(expr1):
             self.assertEqual(term, expr1[index])
 
+    def test_equality(self):
+        expr1 = Expr("8x**3y+6x**2+3y+z")
         self.assertEqual(len(expr1), 4)
         self.assertTrue(Term("6x**2") in expr1)
 
@@ -84,9 +91,20 @@ class TestExpression(unittest.TestCase):
         self.assertIsNotNone(hash(expr1), any)
 
     def test_quadratic_equation(self):
+        self.assertTrue(Expr("5x**2-6x+1").is_quadratic_equation)
+        self.assertTrue(Expr("-x**2+66x-432").is_quadratic_equation)
+        self.assertTrue(Expr("-6y**2-2y-432").is_quadratic_equation)
+
+        self.assertFalse(Expr("2x**2-x").is_quadratic_equation)
+        self.assertFalse(Expr("-2x**2+6y+4").is_quadratic_equation)
+        self.assertFalse(Expr("-2x**3+6x**2+4x").is_quadratic_equation)
+        self.assertFalse(Expr("5x**3-2x**2+x-5").is_quadratic_equation)
+        self.assertFalse(Expr("").is_quadratic_equation)
+
         self.assertEqual(Expr("x**2+5x+6").quadratic_equation(), {-2, -3})
         self.assertEqual(Expr("2x**2-4x-30").quadratic_equation(round_to=3), {5, -3})
         self.assertEqual(Expr("-x**2-6x+8").quadratic_equation(round_to=3), {-7.123, 1.123})
+        self.assertEqual(Expr("2x**2-8x-24").quadratic_equation(round_to=3), {6, -2})
 
     def test_greatest_common_facter(self):
         self.assertEqual(Expr("10x**2+15x+65").gcf, Term("5"))
