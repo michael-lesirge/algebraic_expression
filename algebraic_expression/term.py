@@ -1,4 +1,4 @@
-from algebraic_expression.utils import safe_int, sort_dict, sum_dict, subtract_dict
+from .utils import safe_int, sort_dict, sum_dict, subtract_dict
 
 
 def parse_term(user_input: str) -> tuple[int, dict]:

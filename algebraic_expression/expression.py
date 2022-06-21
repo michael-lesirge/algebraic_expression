@@ -1,5 +1,5 @@
 from algebraic_expression import Term
-from algebraic_expression.utils import safe_int, gcd, min_common_num, sqrt
+from .utils import safe_int, gcd, min_common_num, sqrt
 
 
 def parse_expression(user_input: str) -> list[Term]:
